@@ -1,4 +1,6 @@
-##
+### Clean workspace
+rm(list=ls())
+
 
 
 
@@ -52,4 +54,56 @@ traits <- traits[which(traits$SpecName %in% species$Species_full),]
 nrow(traits)
 
 
+
+# Species by sites
+specsbysites_long$Species_full <- paste(specsbysites_long$Genus, specsbysites_long$Species, sep=" ")
+
+specsbysites <- table(unique(specsbysites_long[,c("Transect", "Species_full")]))
+specsbysites <- as.data.frame.matrix(specsbysites)
+
+specsbysites_ab <- table(specsbysites_long[,c("Transect", "Species_full")])
+specsbysites_ab <- as.data.frame.matrix(specsbysites_ab)
+
+
+# species numbers per plot
+rowSums(specsbysites)
+
+# species numbers per plot
+rowSums(specsbysites_ab)
+
+par(mfrow=c(1,2))
+hist(rowSums(specsbysites), xlab = "Species number")
+hist(rowSums(specsbysites_ab), xlab = "Number of individuals")
+
+
+
+
+# Hill numbers
+# install.packages("iNEXT")
+library(iNEXT)
+# https://cran.r-project.org/web/packages/iNEXT/vignettes/Introduction.html
+
+
+#install.packages("remotes")
+#remotes::install_github("MoBiodiv/mobr")
+#library(mobr)
+
+
+
+
+library(FD)
+#http://www.imsbio.co.jp/RGM/R_rdfile?f=FD/man/FD-package.Rd&d=R_CC
+#functional diversity
+
+
+#calcluate functional diversity(
+  
+#calculate community weighted meandist(
+  
+  
+ #do the same manually! with some apply function(
+    
+ 
+)
+)
 

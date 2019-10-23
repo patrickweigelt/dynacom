@@ -1,0 +1,372 @@
+---
+title: "Multivariate analyses of biodiversity across time and space"
+subtitle: "Day 1: Basics and spatial data in R"
+author: "Patrick Weigelt"
+date: "November 7th, 2019"
+output: 
+  html_document: 
+    theme: flatly
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+&nbsp;
+_[back to overview](index.html)_
+&nbsp;
+&nbsp;
+
+## 1. Preparation
+
+### a) Prepare your system for exchanging data
+Set the format your computer uses to display numbers to 
+English format for exchanging data with others:
+
+* Decimal symbol: " . "  
+* Digit grouping symbol: " , "  
+* List seperator: " , "  
+&nbsp;
+
+### b) Install software
+
+* Get R from <http://www.r-project.org/>
+* Get RStudio from <https://www.rstudio.com/>
+
+### c) Create a new project in RStudio
+
+_Do this only once for the entire practical part of the class and once again for your project in the end but not for each session separately_
+&nbsp;
+
+* Open RStudio  
+* File | New Project
+* Select *either* 'New Directory' or 'Existing Directory'   
+  this will be the working folder for our course (on your computer)
+* Locate the project on your computer in a place 
+  (e.g. '~Desktop/Courses/Macroecology)  
+* Name your project  
+* Within your project's folder, create three sub-folders: 
+    + data
+    + code
+    + figures
+* Create a new empty R script: File | New File | R script
+* Type: # Day 1: getting started
+* Save file (in ~/code): "0_Code_Day1.R" 
+&nbsp;
+* Start coding!
+
+
+## 2. Getting started
+**Using R as a calulator**
+
+```{r, eval=FALSE}
+# use the console to do simple calculations
+2 + 2
+2 * 2
+8 / 2
+6 - 2
+sqrt(16) # sqrt() is a function
+16^(1/2)
+2^2
+1/2 ^ (-2)
+log10(10000)
+```
+What is the answer of each of the operations?  
+&nbsp;
+
+
+**Assign a value to an object**
+
+_Numbers_
+```{r}
+a <- 4
+b <- sqrt(16)
+number_3 <- 2 * 2
+```
+
+```{r}
+a
+number_3
+a*b
+number_3 / b
+```
+&nbsp;
+
+
+_Character strings_
+```{r}
+text_a <- "Hello"
+text_a
+
+text_a <- "Good bye" # overwrite the object
+text_a
+```
+&nbsp;
+
+
+In R Studio the objects are summed up at the top-right corner. For seeing the stored objects use:
+```{r}
+ls()
+```
+&nbsp;
+
+
+## 3. Getting help in R
+
+`?function.name`
+`??keyword`
+
+```{r, eval=FALSE}
+?sqrt # will open help page in Help tab of RStudio or browser
+??squareroot
+```
+&nbsp;
+
+
+## 4. Data structures and indexing
+
+### a) Numbers \& characters
+_single values_
+
+```{r}
+mode(a)
+str(a)
+```
+
+```{r}
+mode(text_a)
+str(text_a)
+```
+&nbsp;
+
+
+### b) Vectors
+_sequences of values of the same mode_
+
+**Create a vector of numbers**
+```{r}
+vector_1 <- c(1,5,6,3.4,10,11)
+vector_1
+```
+&nbsp;
+
+**Indexing and modifying a vector**
+```{r}
+vector_1[3]
+vector_1[3] <- 5
+vector_1[3]
+```
+&nbsp;
+
+**Creating a sequence of numbers**
+```{r}
+vector_2 <- c(1:6)
+vector_2
+vector_2 <- seq(1,12,by=2) # overwriting
+vector_2
+```
+
+```{r}
+vector_3 <- rep(c(1,2),3) # repeats c(1,2) three times
+vector_3
+```
+&nbsp;
+
+**Create a vector of character strings**
+```{r}
+vector_4 <- c("blue","red","green","yellow","grey","black")
+vector_4
+vector_4[4]
+```
+
+```{r}
+mode(vector_4)
+length(vector_2)
+mode(vector_2)
+```
+&nbsp;
+
+You can do calculations with numeric vectors just like with values
+```{r}
+mean(vector_2) # function for calculating the mean
+sd(vector_2)   # standard deviation
+```
+
+```{r}
+vector_2
+vector_2 ^ 2
+
+vector_5 <- vector_1 + vector_2
+vector_5
+```
+&nbsp;
+
+**Plotting vectors**
+```{r}
+plot(vector_2,vector_1)
+```
+
+
+### c) Arrays and matrices
+_tables of values of the same mode with n dimensions (matrix = 2 dimensions)_
+```{r}
+matrix_1 <- matrix(NA, nrow = 6, ncol = 6)
+matrix_1
+
+matrix_1 <- matrix(1:36, nrow = 6, ncol = 6) # Filling a matrix with a sequence of values
+matrix_1
+
+matrix_2 <- matrix(1:(6*6), nrow = 6, ncol = 6, byrow = TRUE)
+matrix_2
+```
+&nbsp;
+
+**Indexing a matrix**
+```{r}
+matrix_2[3,5] # row,column
+matrix_2[3,]  # select a row
+matrix_2[,5]  # select a column
+```
+&nbsp;
+
+You can do calculations with numeric matrices just like with values and vectors
+```{r}
+matrix_1 + 1
+matrix_1 ^ 2
+```
+
+```{r}
+matrix_1 + matrix_2 # matrix by matrix
+matrix_1 * vector_2 # matrix by vector; vector of length 6 is recycled!
+```
+
+```{r}
+mean(matrix_1)     # mean of all values in matrix
+colMeans(matrix_1) # mean values per column
+```
+&nbsp;
+
+
+### d) data.frames 
+_tables of values of one mode per column_
+
+**Create a data.frame**
+```{r}
+df_1 <- data.frame(ID = vector_2, number_1 = vector_1, colour = vector_4)
+df_1
+```
+
+
+```{r}
+str(df_1) 
+```
+"colour" is a factor; makes sense if certain values or levels are repeated
+
+&nbsp;
+
+**Indexing**
+```{r}
+df_1[,3]        # by column number (also works for rows; [2,])
+df_1[,"colour"] # calling by column name
+df_1$colour     # calling by column name using $
+```
+
+```{r}
+levels(df_1[,3])
+df_1[,3] <- as.character(df_1[,3]) # change column to character vector
+str(df_1)
+```
+colour is a character vector
+&nbsp;
+
+```{r}
+plot(df_1$ID,df_1$number_1, col=df_1$colour)
+```
+
+## 5. data.frame exercise  
+
+1) Imagine a field study with 5 plots (1,2,3,...) in each of 3 vegetation types (forest, shrubland, grassland).  
+2) Create a data.frame with 1 row per plot and 2 columns for "vegetation_type" and "plot".  
+3) Every second day of a month a student visits one of the plots. Add a third column called "day" indicating when the student visits each plot: 1, 3, 5, ...
+
+```{r, echo=FALSE}
+plots <- data.frame(vegetation_type = rep(c("forest", "shrubland", "grassland"),each=5), plot = rep(1:5,3))
+plots$day <- seq(1,29,by=2)
+knitr::kable(plots, caption="Table 1: Dataframe exercise")
+```
+&nbsp;
+
+
+## 6. Loading and visualising environmental raster layers  
+
+**Download the following raster layers**  
+_GMTED - Digital elevation data <https://topotools.cr.usgs.gov/gmted_viewer/viewer.htm>_  
+[Elevation above sea level (mn30_grd.zip)](http://edcintl.cr.usgs.gov/downloads/sciweb1/shared/topo/downloads/GMTED/Grid_ZipFiles/mn30_grd.zip)
+
+_Chelsa - Climate data <http://chelsa-climate.org/>_  
+[Annual mean temperature (CHELSA_bio10_01.tif)](http://www.wsl.ch/lud/chelsa/data/bioclim/integer/CHELSA_bio10_01.tif)  
+[Mean annual precipitation (CHELSA_bio10_12.tif)](http://www.wsl.ch/lud/chelsa/data/bioclim/integer/CHELSA_bio10_12.tif)  
+&nbsp;
+
+**Extract and copy the rasters into your R-project folder ../data/**  
+```{r, echo=FALSE}
+getwd()
+```
+
+**Exercise: Open QGIS and add the raster layers to a project in QGIS**  
+&nbsp;
+
+**Load raster library**  
+```{r}
+# install.packages("raster") # install the raster package in case not done yet
+library(raster, quietly = TRUE)
+```
+```{r, echo=FALSE}
+if (file.exists("D:/rastertemp")){rasterOptions(tmpdir="D:/rastertemp/")} # raster saves large temporary files in your user operating systems` user folder. You might want to change this if you're running out of disk space
+```
+&nbsp;
+
+**Import global digital elevation model and plot it**  
+```{r}
+elev <- raster("data/mn30_grd")
+par(mfrow=c(1,1))
+plot(elev)
+```
+&nbsp;
+
+**Import climate data from Chelsa and plot it**  
+```{r}
+bio1 <- raster("data/CHELSA_bio10_01.tif")
+bio12 <- raster("data/CHELSA_bio10_12.tif")
+```
+```{r}
+plot(bio1)  # Temperature (*10 °C)
+plot(bio12) # Precipitation (mm)
+```
+&nbsp;
+
+**Have a look at characteristics of the raster layers**  
+`str(bio1) # long output; try it out`
+
+```{r}
+crs(bio1)
+bio1@crs
+bio1@ncols
+bio1@nrows
+area(bio1)
+```
+30 arc seconds resolution = ~1km² at the equator
+&nbsp;
+
+**You can do calculations with the raster layers**  
+```{r}
+bio1 <- bio1/10      # Careful! this is computer intense and might take a long time
+plot(bio1)           # Temperature (°C)
+points(9.916,51.541, pch=4) # Göttingen
+text(9.916,51.541, "You are here", pos = 4)
+```
+
+
+
+

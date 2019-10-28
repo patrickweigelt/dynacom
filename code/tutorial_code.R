@@ -2,7 +2,11 @@
 rm(list=ls())
 
 
+# This is NOT a cookbook on how to do certain analyses but rather a showcase of two things:
+# 1. There are basic R functions and specialized functions from various packages than allow you
+# to bring data of various kinds (communities, site characteristics, traits, phylogeny)
 
+# 2. analyses packages
 
 # load plots
 plots <- read.csv("data/WAmazonian_Palms_transect.csv")
@@ -82,7 +86,12 @@ hist(rowSums(specsbysites_ab), xlab = "Number of individuals")
 # install.packages("iNEXT")
 library(iNEXT)
 # https://cran.r-project.org/web/packages/iNEXT/vignettes/Introduction.html
+?iNEXT
+data(bird)
+str(spider)
 
+test <- iNEXT(t(specsbysites_ab))
+test$DataInfo
 
 #install.packages("remotes")
 #remotes::install_github("MoBiodiv/mobr")
@@ -100,8 +109,7 @@ library(FD)
   
 #calculate community weighted meandist(
   
-  
- #do the same manually! with some apply function(
+#do the same manually! with some apply function(
     
  
 )

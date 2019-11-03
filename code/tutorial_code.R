@@ -39,6 +39,7 @@ library(vegan)
 library(FactoMineR)
 library(missMDA)
 library(iNEXT)
+library(reshape2)
 
 
 # load plot information
@@ -161,14 +162,19 @@ plots_PCA_imputed[is.na(plots_PCA$pH_KCl),]
 pca_imputed<-PCA(plots_PCA_imputed, scale.unit=TRUE, graph=FALSE) # keep 3 dimensions (85% of variation)
 plot(pca_imputed,choix="var")
 
+# extract axis scores and eigenvalues
+str(pca_imputed)
+pca_imputed$eig
+head(pca_imputed$ind$coord)
 
 # make nicer plots
 
-# extract axis scores and eigenvalues
 
 
 
 
+
+### Species diversity and composition
 
 
 # load species occurrances per plot
@@ -208,19 +214,40 @@ hist(colSums(specsbysites_ab), xlab = "Number of individuals")
 
 
 # Hill numbers
+# iNext provides three measures of Hill numbers of order q: species richness (q = 0), Shannon diversity (q = 1, the exponential of Shannon entropy) and Simpson diversity (q = 2, the inverse of Simpson concentration).
+# For each diversity measure, iNEXT uses the observed sample of abundance or incidence data to compute diversity estimates for two types of rarefaction and extrapolation.
 # https://cran.r-project.org/web/packages/iNEXT/vignettes/Introduction.html
+
 hill_numbers <- iNEXT(specsbysites_ab)
-str(hill_numbers)
-hill_numbers$DataInfo
+
+head(hill_numbers$DataInfo)
+head(hill_numbers$AsyEst)
 
 
+# reshape long format data.frame to join to plots using reshape2
+
+
+diversity <- melt(hill_numbers$AsyEst, id.vars=1:2)
+head(diversity)
+diversity <- dcast(diversity, Site~variable+Diversity, value.var = "value")
+head(diversity)
+
+
+# tidyr
+diversity_2 <- pivot_wider(hill_numbers$AsyEst, id_cols=c(Site,Diversity), names_from = Diversity, values_from=c(Observed,Estimator,s.e.,LCL,UCL))
+head(diversity_2)
+
+
+
+plots
 
 
 
 # nmds
 
+data(spider)
 
-
+head(spider)
 
 
 # extract unique species names and create a combined species name (Genus epithet)

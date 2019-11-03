@@ -38,6 +38,8 @@ library(psych)
 library(vegan)
 library(FactoMineR)
 library(missMDA)
+library(iNEXT)
+
 
 # load plot information
 plots <- read.csv("data/WAmazonian_Palms_transect.csv")
@@ -176,6 +178,51 @@ specsbysites_long <- read.csv("data/WAmazonian_Palms_species.csv", stringsAsFact
 # simplify data: get rid of transect subunits and infraspecific taxon names
 specsbysites_long <- specsbysites_long[,c("Transect", "Genus", "Species", "Growth_class")]
 
+
+# Species by sites
+specsbysites_long$Species_full <- paste(specsbysites_long$Genus, specsbysites_long$Species, sep=" ")
+
+specsbysites <- table(unique(specsbysites_long[,c("Species_full","Transect")]))
+specsbysites <- as.data.frame.matrix(specsbysites)
+
+specsbysites_ab <- table(specsbysites_long[,c("Species_full","Transect")])
+specsbysites_ab <- as.data.frame.matrix(specsbysites_ab)
+
+specsbysites[1:5,1:5]
+
+# species numbers per plot
+colSums(specsbysites)
+
+# Individuals per plot
+colSums(specsbysites_ab)
+
+# plots occupied per species
+rowSums(specsbysites)
+
+# individuals per species
+rowSums(specsbysites_ab)
+
+par(mfrow=c(1,2))
+hist(colSums(specsbysites), xlab = "Species number")
+hist(colSums(specsbysites_ab), xlab = "Number of individuals")
+
+
+# Hill numbers
+# https://cran.r-project.org/web/packages/iNEXT/vignettes/Introduction.html
+hill_numbers <- iNEXT(specsbysites_ab)
+str(hill_numbers)
+hill_numbers$DataInfo
+
+
+
+
+
+# nmds
+
+
+
+
+
 # extract unique species names and create a combined species name (Genus epithet)
 species <- unique(specsbysites_long[,c("Genus", "Species")])
 species$Species_full <- paste(species$Genus, species$Species, sep=" ")
@@ -184,14 +231,6 @@ nrow(species)
 nrow(species[which(species$Species!="sp"),])
 length(which((species$Species!="sp")))
 sum(species$Species!="sp")
-
-
-
-
-
-### better move the species by sites matrix stuff here already and do nmds and diversity metrics then the traits and FD then (Phylogeny and PD?)
-
-
 
 
 
@@ -231,34 +270,8 @@ specsbysites_ab <- table(specsbysites_long[,c("Transect", "Species_full")])
 specsbysites_ab <- as.data.frame.matrix(specsbysites_ab)
 
 
-# species numbers per plot
-rowSums(specsbysites)
-
-# species numbers per plot
-rowSums(specsbysites_ab)
-
-par(mfrow=c(1,2))
-hist(rowSums(specsbysites), xlab = "Species number")
-hist(rowSums(specsbysites_ab), xlab = "Number of individuals")
 
 
-
-
-
-# nmds
-
-
-
-# Hill numbers
-# install.packages("iNEXT")
-library(iNEXT)
-# https://cran.r-project.org/web/packages/iNEXT/vignettes/Introduction.html
-?iNEXT
-data(bird)
-str(spider)
-
-test <- iNEXT(t(specsbysites_ab))
-test$DataInfo
 
 #install.packages("remotes")
 #remotes::install_github("MoBiodiv/mobr")

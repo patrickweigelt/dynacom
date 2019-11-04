@@ -10,6 +10,12 @@ rm(list=ls())
 # 2. There are a lot of dedicated R packages to calculate ecological metrics and do analyses
 
 
+
+# Reading: https://adv-r.hadley.nz/
+#          https://r4ds.had.co.nz/
+
+
+
 # The data for todays tutorial comes from 
 
 
@@ -34,12 +40,22 @@ rm(list=ls())
 library(maps)
 library(plyr)
 library(dplyr)
+library(ggplot2)
 library(psych)
 library(vegan)
 library(FactoMineR)
 library(missMDA)
 library(iNEXT)
 library(reshape2)
+library(FD)
+library(sjPlot)
+library(jtools)
+library(ape)
+library(PhyloMeasures)
+
+
+
+
 
 
 # load plot information
@@ -133,8 +149,8 @@ summary(plots)
 # PCA
 # remove Transects with two many NAs
 plots_PCA <- plots[!(is.na(plots$pH_KCl) & is.na(plots$moist) & is.na(plots$ECEC)),]
-# remove Variables that have more than 19% NAs
-plots_PCA <- plots_PCA[,apply(plots_PCA, 2, function(x) sum(is.na(x))<=44) ] # keep all variables with 10 or less NAs
+# remove Variables that have more than 10% NAs
+plots_PCA <- plots_PCA[,apply(plots_PCA, 2, function(x) sum(is.na(x))<=44) ] 
 
 str(plots_PCA)
 summary(plots_PCA)
@@ -145,30 +161,36 @@ pairs.panels(plots_PCA[,c(15:28)])
 
 pca<-PCA(plots_PCA[,c(4,7,15:28)],scale.unit = TRUE, graph=FALSE)
 
-plot(pca,choix="var")
 
 
 ### Impute missing values
 # https://youtu.be/YDbx2pk9xNY
 
 # Estimate the number of dimensions for the Principal Component Analysis by cross-validation
-number_dim <- estim_ncpPCA(plots_PCA[,c(4,7,15:28)], ncp.min=0, ncp.max=5, scale=TRUE, method.cv="kfold")
+number_dim <- estim_ncpPCA(plots_PCA[,c(4,7,15:28)], ncp.min=3, ncp.max=5, scale=TRUE, method.cv="kfold")
 number_dim
 # impute missing values
 plots_PCA_imputed<-imputePCA(plots_PCA[,c(4,7,15:28)], ncp=number_dim$ncp)
 plots_PCA_imputed<-plots_PCA_imputed$completeObs
+plots_PCA[is.na(plots_PCA$pH_KCl),c(4,7,15:28)]
 plots_PCA_imputed[is.na(plots_PCA$pH_KCl),]
+rownames(plots_PCA_imputed) <- plots_PCA$Transect
 
 pca_imputed<-PCA(plots_PCA_imputed, scale.unit=TRUE, graph=FALSE) # keep 3 dimensions (85% of variation)
 plot(pca_imputed,choix="var")
+#biplot function?
 
 # extract axis scores and eigenvalues
 str(pca_imputed)
 pca_imputed$eig
 head(pca_imputed$ind$coord)
 
-# make nicer plots
+# Add PCA axis scores to plots_PCA data.frame
+plots_PCA <- cbind(plots_PCA, pca_imputed$ind$coord)
 
+
+# make nicer plots
+# What axes do the variables relate to?
 
 
 
@@ -223,31 +245,69 @@ hill_numbers <- iNEXT(specsbysites_ab)
 head(hill_numbers$DataInfo)
 head(hill_numbers$AsyEst)
 
+# Plotting accumulation curves would make sense for groups of plots for example from a certain region or treatment. Here we only use the hill numbers and diversity estimates per plot
+
+# To join the diversity metrics to our plots we need to convert them to wide format. Currently semi-long format?
+
+
+# Since empty spaces in column names are unhandy we first replace them in the Diversity column
+hill_numbers$AsyEst$Diversity <- gsub(" ", "_", hill_numbers$AsyEst$Diversity)
+head(hill_numbers$AsyEst)
 
 # reshape long format data.frame to join to plots using reshape2
-
-
 diversity <- melt(hill_numbers$AsyEst, id.vars=1:2)
 head(diversity)
 diversity <- dcast(diversity, Site~variable+Diversity, value.var = "value")
 head(diversity)
 
 
-# tidyr
 diversity_2 <- pivot_wider(hill_numbers$AsyEst, id_cols=c(Site,Diversity), names_from = Diversity, values_from=c(Observed,Estimator,s.e.,LCL,UCL))
 head(diversity_2)
 
 
+?pivot_wider
+names(diversity)[1] <- "Transect"
+plots_PCA <- join(diversity, plots_PCA, type="right")
 
-plots
+
+
+plot(abs(plots_PCA$Latitude), plots_PCA$Observed_Species_richness)
+plot(plots_PCA$Mean_annual_PPT, plots_PCA$Observed_Species_richness)
+
+
+plot(plots_PCA$Latitude, plots_PCA$Observed_Species_richness)
+plot(plots_PCA$Latitude, plots_PCA$Observed_Species_richness)
+
+plot(plots_PCA$Dim.1, plots_PCA$Observed_Species_richness)
+plot(plots_PCA$Dim.1, plots_PCA$Observed_Shannon_diversity)
+plot(plots_PCA$Dim.1, plots_PCA$Observed_Simpson_diversity)
+
+plot(plots_PCA$Dim.2, plots_PCA$Observed_Species_richness)
+plot(plots_PCA$Dim.3, plots_PCA$Observed_Species_richness)
+plot(plots_PCA$Dim.4, plots_PCA$Observed_Species_richness)
+
+hist(plots_PCA$Observed_Species_richness)
+
+lm()
+
+
+
+# We are not going into the details of regression models and model selection here 
+# For your experimental setup you will most likely use mixed effects models. New package for mixed model diagnostics
+# https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html
 
 
 
 # nmds
 
-data(spider)
+betadiv <- vegdist(specsbysites_ab, method="bray")  # 1- abundance based Sörensen Index
 
-head(spider)
+nmds <- metaMDS(betadiv)
+
+plot(nmds)
+
+
+
 
 
 # extract unique species names and create a combined species name (Genus epithet)
@@ -300,14 +360,9 @@ specsbysites_ab <- as.data.frame.matrix(specsbysites_ab)
 
 
 
-#install.packages("remotes")
-#remotes::install_github("MoBiodiv/mobr")
-#library(mobr)
 
 
 
-
-library(FD)
 #http://www.imsbio.co.jp/RGM/R_rdfile?f=FD/man/FD-package.Rd&d=R_CC
 #functional diversity
 

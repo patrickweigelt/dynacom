@@ -121,16 +121,17 @@ library(tidyr)
 ```
 
 
-## 3. Getting started: Plot data
+## 3. Getting started: Plot data  
 
+### a) Palm plots  
 
-#### Clean workspace
+#### Clean workspace  
 ```{r, echo=TRUE}
 rm(list=ls())
 
 ```
 
-#### Load plot information
+#### Load plot information  
 ```{r, echo=TRUE}
 plots <- read.csv("data/WAmazonian_Palms_transect.csv")
 str(plots[,c(1:10)])
@@ -140,7 +141,7 @@ range(plots$Longitude)
 ```
 
 
-#### Map plots
+#### Map plots  
 ```{r, echo=TRUE}
 map('world', xlim = c(-85,-47), ylim = c(-21,13), lforce="e")
 title(main = "Western Amazonian palm plots", xlab="longitude", ylab="Latitude")
@@ -148,7 +149,9 @@ points(plots$Longitude, plots$Latitude, pch=4)
 map.axes()
 ```
 
-#### Load soil data for plots
+### b) Soil data
+
+#### Load soil data for plots and subplots
 ```{r, echo=TRUE}
 soil <- read.csv("data/WAmazonian_Palms_soil.csv")
 tail(soil)
@@ -179,63 +182,75 @@ suppressWarnings(soils_plots <- aggregate(soil, list(soil$Transect), FUN = funct
 soils_plots <- aggregate(soil, list(soil$Transect), FUN = function(x) mean(x, na.rm=TRUE))
 head(soils_plots)
 ```
-The function `mean()` can not be applied to the character column: NA's introduced
-
-
+The function `mean()` can not be applied to the character columns: NA's introduced.  
+We can instead apply different function for different parts of the data.frame but this is a bit tedious:  
 ```{r, echo=TRUE}
 soils_plots_1 <- aggregate(soil[,c(3:29)], list(soil$Transect), FUN = function(x) mean(x, na.rm=TRUE))
 soils_plots_2 <- aggregate(soil[,c(30:ncol(soil))], list(soil$Transect), FUN = function(x) paste(unique(x[!is.na(x)]), collapse=","))
 
-soils_plots <- join(soils_plots_1,soils_plots_2)
+soils_plots <- join(soils_plots_1,soils_plots_2, by="Group.1")
 
+head(soils_plots)
+```
 
-### many packages that help with data manipulation (plyr, reshape2, data.table, purrrlyr)
-### Most widely used nowadays: dplyr
-# https://dplyr.tidyverse.org/
-# Also see tutorial by Nathaly Guerrero-Ramirez
+* *dplyr* version: 
+Many packages help with data manipulation (plyr, reshape2, data.table, purrrlyr)  
+Most widely used nowadays: _[dplyr](https://dplyr.tidyverse.org/)_
+(Also see tutorial from first day by Nathaly Guerrero-Ramirez)
 
+```{r, echo=TRUE}
 soil_grouped <- group_by(soil, Transect) ### group by plot
 soils_plots <- dplyr::summarize(soil_grouped, mean_moist = mean(moist, na.rm = TRUE)) ### calculate mean values by grouping
+```
 
-# tidy version
+* *tidy* version: 
+
+```{r, echo=TRUE}
 soils_plots <- soil %>%
   group_by(Transect) %>% 
   dplyr::summarize(mean_moist = mean(moist, na.rm = TRUE)) 
-
-#View(soils_plots)
 
 
 soils_plots_1 <- summarize_at(soil_grouped, .vars=c(2:28), .funs = mean, na.rm=TRUE)
 soils_plots_2 <- summarize_at(soil_grouped, .vars=c(29:31), .funs = function(x) paste(unique(x[!is.na(x)]), collapse=","))
 soils_plots <- join(soils_plots_1,soils_plots_2)
 
-# Of course there are many other options than the arithmetic mean for aggregating data (median, sd, etc). In the case of pH
-# (which is -log10(H+) it would be straightforward to backtransform before calulating the mean. This could be done beforehand
-# on the entire ph columns or within the function for aggregating
+```
+#### Aggreating pH  
+Of course there are many other options than the arithmetic mean for aggregating data (median, sd, etc). In the case of pH (which is -log10(H+) it would be straightforward to backtransform before calulating the mean. This could be done beforehand on the entire ph columns or within the function for aggregating:
 
-# beforehand
+* Beforehand
+```{r, echo=TRUE}
 soil$H <- 10^(-soil$pH_KCl) # backtransform
 soil_grouped <- group_by(soil, Transect) ### group by plot
 soils_pH <- dplyr::summarize(soil_grouped, mean_H = mean(H, na.rm = TRUE)) ### calculate mean values by grouping
 soils_pH$pH_KCl <- -log10(soils_pH$mean_H) # transform to pH
+```
 
-# within function
+* Within function
+```{r, echo=TRUE}
 soil_grouped <- group_by(soil, Transect) ### group by plot
 soils_pH_2 <- dplyr::summarize(soil_grouped, mean_pH_KCl = -log10(mean(10^-pH_KCl, na.rm = TRUE))) ### apply function to values by grouping
 
-plot(soils_pH$pH_KCl, soils_pH_2$mean_pH_KCl)
 all(soils_pH$pH_KCl==soils_pH_2$mean_pH_KCl, na.rm=TRUE)
-
+par(mfrow=c(1,2))
+plot(soils_pH$pH_KCl, soils_pH_2$mean_pH_KCl)
 plot(soils_pH$pH_KCl, soils_plots$pH_KCl)
-# I am not a soil biologist: Think about how to aggregate!
-
-
 soils_plots$pH_KCl <- soils_pH$pH_KCl
+```
+I am not a soil biologist: Think about how to aggregate!  
 
-# join main plot data and soil data
-plots <- join(plots, soils_plots, type="left")
-summary(plots)
+#### Join main plot data and soil data
 
+```{r, echo=TRUE}
+plots <- join(plots, soils_plots, type="left", by="Transect")
+#summary(plots)
+names(plots)
+```
+
+
+
+```{r, echo=TRUE}
 
 
 # Excercise?

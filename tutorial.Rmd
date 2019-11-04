@@ -1,42 +1,62 @@
-### Clean workspace
-rm(list=ls())
+---
+title: "Multivariate analyses of biodiversity across time and space"
+subtitle: "2nd Dynacom Workshop"
+author: "Patrick Weigelt"
+date: "November 2019"
+output: 
+  html_document: 
+    theme: flatly
+    toc: yes
+---
 
 
-# This is NOT a cookbook on how to do certain analyses but rather a showcase of two things:
-
-# 1. There are basic R functions and specialized functions from various packages that allow you
-# to combine data of various kinds (communities, site characteristics, traits, phylogenies) for analyses
-
-# 2. There are a lot of dedicated R packages to calculate ecological metrics and do analyses
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
 
+## Overview  
 
-# Reading: https://adv-r.hadley.nz/
-#          https://r4ds.had.co.nz/
+The main objective for this workshop is to strengthen your biodiversity data analysis skills in R. This tutorial is, however, NOT a cookbook about how to do certain analyses but rather a showcase of two things:
 
+1. There are basic R functions and specialized functions from various R packages that allow you
+to reshape and combine data of various kinds (communities, site characteristics, traits, phylogenies) for analyses.
 
+2. There are a lot of dedicated R packages to calculate ecological metrics and do specific community ecological analyses (which we can only touch superficially here).
 
-# The data for todays tutorial comes from 
+We use data on palm communities, functional traits, site characteristics, and phylogenetic rekationships as an example dataset due to its unique coverage of different aspects of biodiversity.
 
+#### Palm communities (plot data):
+Balslev, H., Kristiansen, S.M. & Muscarella, R. (2019). _[Palm community transects and soil properties in western Amazonia.](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/ecy.2841)_ *Ecology*, e02841.
 
-# palm communities (plot data):
-#Balslev, H., Kristiansen, S.M. & Muscarella, R. (2019) Palm community transects and soil properties in western Amazonia. Ecology, e02841.
+#### Palm traits:
+Kissling, W.D., Balslev, H., Baker, W.J., Dransfield, J., Göldel, B., Lim, J.Y., Onstein, R.E. & Svenning, J.-C. (2019). _[PalmTraits 1.0, a species-level functional trait database of palms worldwide.](https://www.nature.com/articles/s41597-019-0189-0)_ *Scientific Data*, 6, 178.
 
-# palm traits:
-#Kissling, W.D., Balslev, H., Baker, W.J., Dransfield, J., Göldel, B., Lim, J.Y., Onstein, R.E. & Svenning, J.-C. (2019) PalmTraits 1.0, a species-level functional trait database of palms worldwide. Scientific Data, 6, 178.
-
-# phylogeny
-#Faurby, S., Eiserhardt, W.L., Baker, W.J. & Svenning, J.-C. (2016) An all-evidence species-level supertree for the palms (Arecaceae). Molecular Phylogenetics and Evolution, 100, 57-69.
-
-
-
-
-# start a new RStudio project
+#### Palm phylogeny:
+Faurby, S., Eiserhardt, W.L., Baker, W.J. & Svenning, J.-C. (2016). _[An all-evidence species-level supertree for the palms (Arecaceae).](https://www.sciencedirect.com/science/article/pii/S1055790316000701)_ *Molecular Phylogenetics and Evolution*, 100, 57-69.
 
 
+#### Further reading
+Great reading on programming, data analysis and statistics in R can, for example, be found here:
 
-# libraries
+* Wickham, H. (2019). _[Advanced R.](https://adv-r.hadley.nz/)_  
+* Wickham, H. (2017). _[R for Data Science.](https://r4ds.had.co.nz/)_  
+* Bolker, B. (2008). _[Ecological Models and Data in R.](https://www.degruyter.com/viewbooktoc/product/540514)_  
+* Lefcheck, J. (2019). _[Structural Equation Modeling in R for Ecology and Evolution.](https://jslefche.github.io/sem_book/)_  
+* Zuur, A., Ieno, E.N., Walker, N., Savaliev, A.A. & Smith, G.M. (2009). _[Mixed Effects Models and Extensions in Ecology with R.](https://www.springer.com/de/book/9780387874579)_  
+* Borcard, D., Gillet, F., Legendre, P. (2018). _[Numerical Ecology with R.](https://www.springer.com/de/book/9783319714035)_  
+* Lovelace, R., Nowosad, J. & Muenchow, J. (2019). _[Geocomputation with R.](https://geocompr.robinlovelace.net/)_  
 
+
+
+
+start a new RStudio project
+
+
+
+1. An updated version of R (install the following R-packages using `install.packages()`:  
+
+```{r, include=FALSE}
 library(maps)
 library(plyr)
 library(dplyr)
@@ -52,11 +72,32 @@ library(sjPlot)
 library(jtools)
 library(ape)
 library(PhyloMeasures)
+library(tidyr)
+```
 
+```{r, eval=FALSE}
+library(maps)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(psych)
+library(vegan)
+library(FactoMineR)
+library(missMDA)
+library(iNEXT)
+library(reshape2)
+library(FD)
+library(sjPlot)
+library(jtools)
+library(ape)
+library(PhyloMeasures)
+library(tidyr)
+```
 
+```{r, echo=TRUE}
 
-
-
+### Clean workspace
+rm(list=ls())
 
 # load plot information
 plots <- read.csv("data/WAmazonian_Palms_transect.csv")
@@ -106,7 +147,7 @@ soils_plots <- soil %>%
   group_by(Transect) %>% 
   dplyr::summarize(mean_moist = mean(moist, na.rm = TRUE)) 
 
-View(soils_plots)
+#View(soils_plots)
 
 
 soils_plots_1 <- summarize_at(soil_grouped, .vars=c(2:28), .funs = mean, na.rm=TRUE)
@@ -265,7 +306,7 @@ diversity_2 <- pivot_wider(hill_numbers$AsyEst, id_cols=c(Site,Diversity), names
 head(diversity_2)
 
 
-?pivot_wider
+#?pivot_wider
 names(diversity)[1] <- "Transect"
 plots_PCA <- join(diversity, plots_PCA, type="right")
 
@@ -288,7 +329,6 @@ plot(plots_PCA$Dim.4, plots_PCA$Observed_Species_richness)
 
 hist(plots_PCA$Observed_Species_richness)
 
-lm()
 
 
 
@@ -373,7 +413,6 @@ specsbysites_ab <- as.data.frame.matrix(specsbysites_ab)
   
 #do the same manually! with some apply function(
     
- 
-
+```
 
 

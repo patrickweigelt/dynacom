@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-## Overview  
+## 1. Overview  
 
 The main objective for this workshop is to strengthen your biodiversity data analysis skills in R. This tutorial is, however, NOT a cookbook about how to do certain analyses but rather a showcase of two things:
 
@@ -24,16 +24,17 @@ to reshape and combine data of various kinds (communities, site characteristics,
 
 2. There are a lot of dedicated R packages to calculate ecological metrics and do specific community ecological analyses (which we can only touch superficially here).
 
-We use data on palm communities, functional traits, site characteristics, and phylogenetic rekationships as an example dataset due to its unique coverage of different aspects of biodiversity.
+We use data on palm communities, functional traits, site characteristics, and phylogenetic rekationships as an example dataset due to its unique coverage of different aspects of biodiversity:  
+
 
 #### Palm communities (plot data):
-Balslev, H., Kristiansen, S.M. & Muscarella, R. (2019). _[Palm community transects and soil properties in western Amazonia.](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/ecy.2841)_ *Ecology*, e02841.
+* Balslev, H., Kristiansen, S.M. & Muscarella, R. (2019). _[Palm community transects and soil properties in western Amazonia.](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/ecy.2841)_ *Ecology*, e02841.
 
 #### Palm traits:
-Kissling, W.D., Balslev, H., Baker, W.J., Dransfield, J., Göldel, B., Lim, J.Y., Onstein, R.E. & Svenning, J.-C. (2019). _[PalmTraits 1.0, a species-level functional trait database of palms worldwide.](https://www.nature.com/articles/s41597-019-0189-0)_ *Scientific Data*, 6, 178.
+* Kissling, W.D., Balslev, H., Baker, W.J., Dransfield, J., Göldel, B., Lim, J.Y., Onstein, R.E. & Svenning, J.-C. (2019). _[PalmTraits 1.0, a species-level functional trait database of palms worldwide.](https://www.nature.com/articles/s41597-019-0189-0)_ *Scientific Data*, 6, 178.
 
 #### Palm phylogeny:
-Faurby, S., Eiserhardt, W.L., Baker, W.J. & Svenning, J.-C. (2016). _[An all-evidence species-level supertree for the palms (Arecaceae).](https://www.sciencedirect.com/science/article/pii/S1055790316000701)_ *Molecular Phylogenetics and Evolution*, 100, 57-69.
+* Faurby, S., Eiserhardt, W.L., Baker, W.J. & Svenning, J.-C. (2016). _[An all-evidence species-level supertree for the palms (Arecaceae).](https://www.sciencedirect.com/science/article/pii/S1055790316000701)_ *Molecular Phylogenetics and Evolution*, 100, 57-69.
 
 
 #### Further reading
@@ -48,13 +49,38 @@ Great reading on programming, data analysis and statistics in R can, for example
 * Lovelace, R., Nowosad, J. & Muenchow, J. (2019). _[Geocomputation with R.](https://geocompr.robinlovelace.net/)_  
 
 
+## 2. Preparation  
+
+#### a) Install software  
+
+* Get R from <http://www.r-project.org/>
+* Get RStudio from <https://www.rstudio.com/>
+
+#### b) Create a new project in RStudio  
+
+* Open RStudio  
+* File | New Project  
+* Select *either* 'New Directory' or 'Existing Directory', choose a location and name your project  
+  (this will be the default working directory for today)  
+* Within your project's folder, create three sub-folders:  
+    + data  
+    + code  
+    + figures  
+* Create a new empty R script: File | New File | R script  
+* Save file in ~/code 
+* Start coding!  
 
 
-start a new RStudio project
+#### c) Data  
+
+* Download, unzip and copy data into ~/code  
+1. _[Community data](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/ecy.2841)_  
+2. _[Traits and phylogeny](https://datadryad.org/stash/dataset/doi:10.5061/dryad.ts45225)_  
 
 
+#### d) R packages
 
-1. An updated version of R (install the following R-packages using `install.packages()`:  
+* load all nessecary libraries (install the missing ones using `install.packages()`):  
 
 ```{r, include=FALSE}
 library(maps)
@@ -94,40 +120,69 @@ library(PhyloMeasures)
 library(tidyr)
 ```
 
-```{r, echo=TRUE}
 
-### Clean workspace
+## 3. Getting started: Plot data
+
+
+#### Clean workspace
+```{r, echo=TRUE}
 rm(list=ls())
 
-# load plot information
+```
+
+#### Load plot information
+```{r, echo=TRUE}
 plots <- read.csv("data/WAmazonian_Palms_transect.csv")
-str(plots)
+str(plots[,c(1:10)])
+names(plots)
 range(plots$Latitude)
 range(plots$Longitude)
+```
 
 
+#### Map plots
+```{r, echo=TRUE}
 map('world', xlim = c(-85,-47), ylim = c(-21,13), lforce="e")
+title(main = "Western Amazonian palm plots", xlab="longitude", ylab="Latitude")
 points(plots$Longitude, plots$Latitude, pch=4)
 map.axes()
+```
 
-
-# load soil data for plots
+#### Load soil data for plots
+```{r, echo=TRUE}
 soil <- read.csv("data/WAmazonian_Palms_soil.csv")
+tail(soil)
+```
 
 
-### summarize soil data at the level of plots
+#### Summarize soil data at the level of plots
 
-
-# base R version
-
-# apply a function to groups of values (here plots)
+* base R version: 
+Apply a function to groups of values (here plots)
+```{r, echo=TRUE}
 moisture <- tapply(soil$moist, soil$Transect, FUN = mean)
+length(which(!is.na(moisture) & !is.nan(moisture) & is.finite(moisture)))
 moisture <- tapply(soil$moist, soil$Transect, FUN = function(x) mean(x, na.rm=TRUE))
+length(which(!is.na(moisture) & !is.nan(moisture) & is.finite(moisture)))
 moisture <- tapply(soil$moist, soil$Transect, FUN = mean, na.rm=TRUE)
+length(which(!is.na(moisture) & !is.nan(moisture) & is.finite(moisture)))
+moisture[10:30]
+```
 
-# apply a function to groups of values across a whole data.frame
+
+* base R version: 
+Apply a function to groups of values across a whole data.frame
+```{r, include=FALSE}
+suppressWarnings(soils_plots <- aggregate(soil, list(soil$Transect), FUN = function(x) mean(x, na.rm=TRUE)))
+```
+```{r, eval=FALSE}
 soils_plots <- aggregate(soil, list(soil$Transect), FUN = function(x) mean(x, na.rm=TRUE))
-tail(warnings(),1)
+head(soils_plots)
+```
+The function `mean()` can not be applied to the character column: NA's introduced
+
+
+```{r, echo=TRUE}
 soils_plots_1 <- aggregate(soil[,c(3:29)], list(soil$Transect), FUN = function(x) mean(x, na.rm=TRUE))
 soils_plots_2 <- aggregate(soil[,c(30:ncol(soil))], list(soil$Transect), FUN = function(x) paste(unique(x[!is.na(x)]), collapse=","))
 
@@ -183,6 +238,10 @@ summary(plots)
 
 
 
+# Excercise?
+
+
+
 
 ### coorelation structure
 
@@ -202,12 +261,14 @@ pairs.panels(plots_PCA[,c(15:28)])
 
 pca<-PCA(plots_PCA[,c(4,7,15:28)],scale.unit = TRUE, graph=FALSE)
 
+```
+Impute missing values
+https://youtu.be/YDbx2pk9xNY
+
+Estimate the number of dimensions for the Principal Component Analysis by cross-validation
+```{r, eval=FALSE}
 
 
-### Impute missing values
-# https://youtu.be/YDbx2pk9xNY
-
-# Estimate the number of dimensions for the Principal Component Analysis by cross-validation
 number_dim <- estim_ncpPCA(plots_PCA[,c(4,7,15:28)], ncp.min=3, ncp.max=5, scale=TRUE, method.cv="kfold")
 number_dim
 # impute missing values

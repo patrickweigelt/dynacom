@@ -268,7 +268,7 @@ summary(plots_PCA)
 
 
 #### Plot frequency distributions
-```{r, echo=TRUE}
+```{r, echo=TRUE, fig.width=8, fig.height=8}
 par(mfrow=c(4,4))
 for (i in 1:16){
    hist(plots_PCA[,c(4,7,15:28)][,i], xlab = names(plots_PCA[,c(4,7,15:28)][i]), main="")
@@ -276,7 +276,7 @@ for (i in 1:16){
 ```
 
 #### Perform log transformation
-```{r, echo=TRUE}
+```{r, echo=TRUE, fig.width=8, fig.height=8}
 variables_log <- c("Elevation", "moist", "mcf", "loi", "acidity", "ECEC", "Al", "Ca", "Mg", "Na", "K", "P_Bray")
 
 for (i in 1:length(variables_log)){
@@ -287,14 +287,16 @@ Hmisc::hist.data.frame(plots_PCA[,c(4,7,15:28)])
 ```
 
 #### Collinearity
-```{r, echo=TRUE}
+```{r, echo=TRUE, fig.width=8, fig.height=8}
 #pairs.panels(plots_PCA[,unlist(lapply(plots_PCA, is.numeric))])
 pairs.panels(plots_PCA[,c(4,7,15:20)])
 pairs.panels(plots_PCA[,c(21:28)])
 ```
 
 
-### d) Principal Components Analysis (PCA)
+### d) Principal Component Analysis (PCA)  
+
+Principal Component Analysis (PCA) is a tool to reduce dimensionality in a dataset when we can expect linear relationships between variables.
 ```{r, echo=TRUE}
 pca<-PCA(plots_PCA[,c(4,7,15:28)],scale.unit = TRUE, graph=FALSE)
 ```
@@ -302,9 +304,11 @@ pca<-PCA(plots_PCA[,c(4,7,15:28)],scale.unit = TRUE, graph=FALSE)
 #### Impute missing values  
 https://youtu.be/YDbx2pk9xNY  
 
-* Estimate the number of dimensions for the Principal Component Analysis by cross-validation  
-```{r, eval=FALSE}
-number_dim <- estim_ncpPCA(plots_PCA[,c(4,7,15:28)], ncp.min=3, ncp.max=5, scale=TRUE, method.cv="kfold", nbsim = 10)
+* Estimate the number of dimensions for the PCA by cross-validation  
+```{r, echo=TRUE, results="hide"}
+number_dim <- estim_ncpPCA(plots_PCA[,c(4,7,15:28)], ncp.min=3, ncp.max=5, scale=TRUE, method.cv="kfold", nbsim = 10) # Put nbsim up (to 100); takes longer!
+```
+```{r, echo=TRUE}
 number_dim
 ```
 
@@ -312,46 +316,55 @@ number_dim
 ```{r, echo=TRUE}
 plots_PCA_imputed<-imputePCA(plots_PCA[,c(4,7,15:28)], ncp=number_dim$ncp)
 plots_PCA_imputed<-plots_PCA_imputed$completeObs
-plots_PCA[is.na(plots_PCA$pH_KCl),c(4,7,15:28)]
 rownames(plots_PCA_imputed) <- plots_PCA$Transect
+
+head(plots_PCA[is.na(plots_PCA$pH_KCl),c(4,7,15:28)])
 head(plots_PCA_imputed[is.na(plots_PCA$pH_KCl),])
+```
+
+#### Run PCA on imputed dataset  
+```{r, echo=TRUE}
+pca_imputed<-PCA(plots_PCA_imputed, scale.unit=TRUE, graph=FALSE) # 60% of variation on first two axes
+plot(pca_imputed,choix="var")
+# biplot function?
+# make nicer plots
+# What axes do the variables relate to?
+```
+
+
+#### Extract axis scores and eigenvalues
+```{r, echo=TRUE}
+#str(pca_imputed)
+head(pca_imputed$eig)
+head(pca_imputed$ind$coord)
 
 ```
 
-* Run PCA on imputed dataset  
+
+#### Add PCA axis scores to plots_PCA data.frame
 ```{r, echo=TRUE}
-pca_imputed<-PCA(plots_PCA_imputed, scale.unit=TRUE, graph=FALSE) # keep 3 dimensions (85% of variation)
-plot(pca_imputed,choix="var")
-#biplot function?
-
-# extract axis scores and eigenvalues
-str(pca_imputed)
-pca_imputed$eig
-head(pca_imputed$ind$coord)
-
-# Add PCA axis scores to plots_PCA data.frame
 plots_PCA <- cbind(plots_PCA, pca_imputed$ind$coord)
+```
 
 
-# make nicer plots
-# What axes do the variables relate to?
+## Species diversity and composition
 
+### a) Species composition data
 
-
-
-
-### Species diversity and composition
-
-
-# load species occurrances per plot
+#### Load species occurrances per plot
+```{r, echo=TRUE}
 specsbysites_long <- read.csv("data/WAmazonian_Palms_species.csv", stringsAsFactors = FALSE)
+head(specsbysites_long)
+```
 
-
-# simplify data: get rid of transect subunits and infraspecific taxon names
+#### Simplify data  
+Get rid of transect subunits and infraspecific taxon names.
+```{r, echo=TRUE}
 specsbysites_long <- specsbysites_long[,c("Transect", "Genus", "Species", "Growth_class")]
+```
 
-
-# Species by sites
+#### Species-by-sites matrix
+```{r, echo=TRUE}
 specsbysites_long$Species_full <- paste(specsbysites_long$Genus, specsbysites_long$Species, sep=" ")
 
 specsbysites <- table(unique(specsbysites_long[,c("Species_full","Transect")]))
@@ -359,31 +372,41 @@ specsbysites <- as.data.frame.matrix(specsbysites)
 
 specsbysites_ab <- table(specsbysites_long[,c("Species_full","Transect")])
 specsbysites_ab <- as.data.frame.matrix(specsbysites_ab)
+```
 
-specsbysites[1:5,1:5]
-
-# species numbers per plot
+#### Species numbers per plot
+```{r, echo=TRUE}
 colSums(specsbysites)
+```
 
-# Individuals per plot
+#### Individuals per plot
+```{r, echo=TRUE}
 colSums(specsbysites_ab)
+```
 
-# plots occupied per species
+#### Plots occupied per species
+```{r, echo=TRUE}
 rowSums(specsbysites)
+```
 
-# individuals per species
+#### Individuals per species
+```{r, echo=TRUE}
 rowSums(specsbysites_ab)
 
 par(mfrow=c(1,2))
 hist(colSums(specsbysites), xlab = "Species number")
 hist(colSums(specsbysites_ab), xlab = "Number of individuals")
+```
 
 
-# Hill numbers
-# iNext provides three measures of Hill numbers of order q: species richness (q = 0), Shannon diversity (q = 1, the exponential of Shannon entropy) and Simpson diversity (q = 2, the inverse of Simpson concentration).
-# For each diversity measure, iNEXT uses the observed sample of abundance or incidence data to compute diversity estimates for two types of rarefaction and extrapolation.
-# https://cran.r-project.org/web/packages/iNEXT/vignettes/Introduction.html
+### b) Diversity: Hill numbers  
 
+iNext provides three measures of Hill numbers of order q: species richness (q = 0), Shannon diversity (q = 1, the exponential of Shannon entropy) and Simpson diversity (q = 2, the inverse of Simpson concentration).  
+For each diversity measure, iNEXT uses the observed sample of abundance or incidence data to compute diversity estimates for two types of rarefaction and extrapolation.  
+https://cran.r-project.org/web/packages/iNEXT/vignettes/Introduction.html
+
+
+```{r, echo=TRUE, eval=FALSE}
 hill_numbers <- iNEXT(specsbysites_ab)
 
 head(hill_numbers$DataInfo)

@@ -99,6 +99,7 @@ library(jtools)
 library(ape)
 library(PhyloMeasures)
 library(tidyr)
+library(Hmisc)
 ```
 
 ```{r, eval=FALSE}
@@ -118,6 +119,7 @@ library(jtools)
 library(ape)
 library(PhyloMeasures)
 library(tidyr)
+library(Hmisc)
 ```
 
 
@@ -210,6 +212,10 @@ soils_plots <- soil %>%
   group_by(Transect) %>% 
   dplyr::summarize(mean_moist = mean(moist, na.rm = TRUE)) 
 
+```
+
+
+```{r, echo=TRUE}
 
 soils_plots_1 <- summarize_at(soil_grouped, .vars=c(2:28), .funs = mean, na.rm=TRUE)
 soils_plots_2 <- summarize_at(soil_grouped, .vars=c(29:31), .funs = function(x) paste(unique(x[!is.na(x)]), collapse=","))
@@ -233,15 +239,12 @@ soil_grouped <- group_by(soil, Transect) ### group by plot
 soils_pH_2 <- dplyr::summarize(soil_grouped, mean_pH_KCl = -log10(mean(10^-pH_KCl, na.rm = TRUE))) ### apply function to values by grouping
 
 all(soils_pH$pH_KCl==soils_pH_2$mean_pH_KCl, na.rm=TRUE)
-par(mfrow=c(1,2))
-plot(soils_pH$pH_KCl, soils_pH_2$mean_pH_KCl)
-plot(soils_pH$pH_KCl, soils_plots$pH_KCl)
+plot(soils_pH$pH_KCl, soils_plots$pH_KCl, xlab="mean pH backtransformed", ylab="mean pH")
 soils_plots$pH_KCl <- soils_pH$pH_KCl
 ```
 I am not a soil biologist: Think about how to aggregate!  
 
 #### Join main plot data and soil data
-
 ```{r, echo=TRUE}
 plots <- join(plots, soils_plots, type="left", by="Transect")
 #summary(plots)
@@ -250,49 +253,73 @@ names(plots)
 
 
 
-```{r, echo=TRUE}
+
+### c) Distribution and collinearity of plot characteristics 
 
 
-# Excercise?
+#### Remove plots and variables with too many NAs
 
-
-
-
-### coorelation structure
-
-
-# PCA
-# remove Transects with two many NAs
+```{r, echo=TRUE, fig.width=8,fig.height=8}
 plots_PCA <- plots[!(is.na(plots$pH_KCl) & is.na(plots$moist) & is.na(plots$ECEC)),]
-# remove Variables that have more than 10% NAs
 plots_PCA <- plots_PCA[,apply(plots_PCA, 2, function(x) sum(is.na(x))<=44) ] 
-
-str(plots_PCA)
+dim(plots_PCA)
 summary(plots_PCA)
-names(plots_PCA)
-#pairs.panels(plots_PCA[,unlist(lapply(plots_PCA, is.numeric))])
-pairs.panels(plots_PCA[,c(15:28)])
-
-
-pca<-PCA(plots_PCA[,c(4,7,15:28)],scale.unit = TRUE, graph=FALSE)
-
 ```
-Impute missing values
-https://youtu.be/YDbx2pk9xNY
 
-Estimate the number of dimensions for the Principal Component Analysis by cross-validation
+
+#### Plot frequency distributions
+```{r, echo=TRUE}
+par(mfrow=c(4,4))
+for (i in 1:16){
+   hist(plots_PCA[,c(4,7,15:28)][,i], xlab = names(plots_PCA[,c(4,7,15:28)][i]), main="")
+}
+```
+
+#### Perform log transformation
+```{r, echo=TRUE}
+variables_log <- c("Elevation", "moist", "mcf", "loi", "acidity", "ECEC", "Al", "Ca", "Mg", "Na", "K", "P_Bray")
+
+for (i in 1:length(variables_log)){
+  plots_PCA[,variables_log[i]] <- log10(plots_PCA[,variables_log[i]]+1)
+}
+
+Hmisc::hist.data.frame(plots_PCA[,c(4,7,15:28)])
+```
+
+#### Collinearity
+```{r, echo=TRUE}
+#pairs.panels(plots_PCA[,unlist(lapply(plots_PCA, is.numeric))])
+pairs.panels(plots_PCA[,c(4,7,15:20)])
+pairs.panels(plots_PCA[,c(21:28)])
+```
+
+
+### d) Principal Components Analysis (PCA)
+```{r, echo=TRUE}
+pca<-PCA(plots_PCA[,c(4,7,15:28)],scale.unit = TRUE, graph=FALSE)
+```
+
+#### Impute missing values  
+https://youtu.be/YDbx2pk9xNY  
+
+* Estimate the number of dimensions for the Principal Component Analysis by cross-validation  
 ```{r, eval=FALSE}
-
-
-number_dim <- estim_ncpPCA(plots_PCA[,c(4,7,15:28)], ncp.min=3, ncp.max=5, scale=TRUE, method.cv="kfold")
+number_dim <- estim_ncpPCA(plots_PCA[,c(4,7,15:28)], ncp.min=3, ncp.max=5, scale=TRUE, method.cv="kfold", nbsim = 10)
 number_dim
-# impute missing values
+```
+
+* Impute missing values  
+```{r, echo=TRUE}
 plots_PCA_imputed<-imputePCA(plots_PCA[,c(4,7,15:28)], ncp=number_dim$ncp)
 plots_PCA_imputed<-plots_PCA_imputed$completeObs
 plots_PCA[is.na(plots_PCA$pH_KCl),c(4,7,15:28)]
-plots_PCA_imputed[is.na(plots_PCA$pH_KCl),]
 rownames(plots_PCA_imputed) <- plots_PCA$Transect
+head(plots_PCA_imputed[is.na(plots_PCA$pH_KCl),])
 
+```
+
+* Run PCA on imputed dataset  
+```{r, echo=TRUE}
 pca_imputed<-PCA(plots_PCA_imputed, scale.unit=TRUE, graph=FALSE) # keep 3 dimensions (85% of variation)
 plot(pca_imputed,choix="var")
 #biplot function?

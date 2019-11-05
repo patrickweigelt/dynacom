@@ -315,7 +315,7 @@ number_dim
 * Impute missing values  
 ```{r, echo=TRUE}
 plots_PCA_imputed<-imputePCA(plots_PCA[,c(4,7,15:28)], ncp=number_dim$ncp)
-plots_PCA_imputed<-plots_PCA_imputed$completeObs
+plots_PCA_imputed<-as.data.frame(plots_PCA_imputed$completeObs)
 rownames(plots_PCA_imputed) <- plots_PCA$Transect
 
 head(plots_PCA[is.na(plots_PCA$pH_KCl),c(4,7,15,16)])
@@ -402,9 +402,9 @@ hist(colSums(specsbysites_ab), xlab = "Number of individuals", main="")
 ### b) Diversity: Hill numbers  
 
 iNext provides three measures of Hill numbers of order q:  
-1) species richness (q = 0)  
-2) Shannon diversity (q = 1, the exponential of Shannon entropy)  
-3) Simpson diversity (q = 2, the inverse of Simpson concentration)  
+1. species richness (q = 0)  
+2. Shannon diversity (q = 1, the exponential of Shannon entropy)  
+3. Simpson diversity (q = 2, the inverse of Simpson concentration)  
 For each diversity measure, iNEXT uses the observed sample of abundance or incidence data to compute diversity estimates for two types of rarefaction and extrapolation.  
 
 Learn more here:  
@@ -414,46 +414,57 @@ Read about effective numbers of species and how to get them based on diversity i
 http://www.loujost.com/Statistics%20and%20Physics/Diversity%20and%20Similarity/EffectiveNumberOfSpecies.htm  
 
 
+#### Calculate diversity metrics  
 ```{r, echo=TRUE}
-hill_numbers <- iNEXT(specsbysites_ab)
+hill_numbers <- iNEXT(specsbysites_ab, nboot = 10) # put up nboot (to 50), takes longer
 ```
 
 
 ```{r, echo=TRUE}
 # head(hill_numbers$DataInfo) # basic data information
 # head(hill_numbers$$iNextEst) # Diversity estimates with rarefied and extrapolated samples.
-head(hill_numbers$AsyEst) # asymptotic diversity estimates Chao et al. (2013)
+```
+
+Plotting accumulation curves would make sense for groups of plots for example from a certain region or treatment. Here we only use the hill numbers and diversity estimates per plot:
+```{r, echo=TRUE}
+head(hill_numbers$AsyEst) # asymptotic diversity estimates according to Chao et al. (2013)
+```
+
+#### Join diversity metrics to plot data
+
+To join the diversity metrics to our plots we need to convert them to wide format. Currently semi-long format?  
+
+* Since empty spaces in column names are unhandy we first replace them in the Diversity column
+```{r, echo=TRUE}
+hill_numbers$AsyEst$Diversity <- gsub(" ", "_", hill_numbers$AsyEst$Diversity)
+head(hill_numbers$AsyEst)
+```
+
+* Reshape long format data.frame to join to plots using reshape2
+```{r, echo=TRUE}
+diversity <- melt(hill_numbers$AsyEst, id.vars=1:2)
+head(diversity)
+diversity <- dcast(diversity, Site~variable+Diversity, value.var = "value")
+head(diversity)
+```
+
+* Reshape long format data.frame to join to plots using tidyr
+```{r, echo=TRUE}
+diversity_2 <- pivot_wider(hill_numbers$AsyEst, id_cols=c(Site,Diversity), names_from = Diversity, values_from=c(Observed,Estimator,s.e.,LCL,UCL))
+head(diversity_2)
+```
+
+* Join plots and diversity
+```{r, echo=TRUE}
+names(diversity)[1] <- "Transect"
+plots_PCA <- join(diversity, plots_PCA, type="right", by="Transect")
 ```
 
 
 ```{r, echo=TRUE}
 
-# Plotting accumulation curves would make sense for groups of plots for example from a certain region or treatment. Here we only use the hill numbers and diversity estimates per plot
 
-# To join the diversity metrics to our plots we need to convert them to wide format. Currently semi-long format?
-
-
-# Since empty spaces in column names are unhandy we first replace them in the Diversity column
-hill_numbers$AsyEst$Diversity <- gsub(" ", "_", hill_numbers$AsyEst$Diversity)
-head(hill_numbers$AsyEst)
-
-# reshape long format data.frame to join to plots using reshape2
-diversity <- melt(hill_numbers$AsyEst, id.vars=1:2)
-head(diversity)
-diversity <- dcast(diversity, Site~variable+Diversity, value.var = "value")
-head(diversity)
-
-
-diversity_2 <- pivot_wider(hill_numbers$AsyEst, id_cols=c(Site,Diversity), names_from = Diversity, values_from=c(Observed,Estimator,s.e.,LCL,UCL))
-head(diversity_2)
-
-
-#?pivot_wider
-names(diversity)[1] <- "Transect"
-plots_PCA <- join(diversity, plots_PCA, type="right")
-
-
-
+### c) Diversity - environment relationship
 plot(abs(plots_PCA$Latitude), plots_PCA$Observed_Species_richness)
 plot(plots_PCA$Mean_annual_PPT, plots_PCA$Observed_Species_richness)
 
@@ -471,24 +482,35 @@ plot(plots_PCA$Dim.4, plots_PCA$Observed_Species_richness)
 
 hist(plots_PCA$Observed_Species_richness)
 
+```
+We are not going into the details of regression models and model selection here  
+For your experimental setup you will most likely use mixed effects models. New package for mixed model diagnostics: https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html  
 
+### c) Non-metric Multidimensional Scaling (NMDS)
 
+#### Calculate species turnover
 
-# We are not going into the details of regression models and model selection here 
-# For your experimental setup you will most likely use mixed effects models. New package for mixed model diagnostics
-# https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html
+* Subset 
+```{r, echo=TRUE}
+specsbysites_ab_PCA <- specsbysites_ab[,which(names(specsbysites_ab) %in% plots_PCA$Transect)]
+specsbysites_ab_PCA <- specsbysites_ab_PCA[which(rowSums(specsbysites_ab_PCA)>0),]
 
+# make subset for one region
 
-
-# nmds
-
-betadiv <- vegdist(specsbysites_ab, method="bray")  # 1- abundance based Sörensen Index
-
-nmds <- metaMDS(betadiv)
-
+betadiv <- vegdist(specsbysites_ab_PCA, method="bray")  # 1- abundance based Sörensen Index
+betadiv_step <- stepacross(betadiv, "extended")
+# Function stepacross tries to replace dissimilarities with shortest paths stepping across intermediate sites while regarding dissimilarities above a threshold as missing data (NA). With path = "shortest" this is the flexible shortest path (Williamson 1978, Bradfield & Kenkel 1987), and with path = "extended" an approximation known as extended dissimilarities (De'ath 1999). The use of stepacross should improve the ordination with high beta diversity, when there are many sites with no species in common.
+nmds <- metaMDS(betadiv_step, k=3)
+stressplot(nmds, betadiv)
 plot(nmds)
 
 
+```
+
+
+
+
+```{r, echo=TRUE}
 
 
 

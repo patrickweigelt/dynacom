@@ -263,7 +263,7 @@ names(plots)
 plots_PCA <- plots[!(is.na(plots$pH_KCl) & is.na(plots$moist) & is.na(plots$ECEC)),]
 plots_PCA <- plots_PCA[,apply(plots_PCA, 2, function(x) sum(is.na(x))<=44) ] 
 dim(plots_PCA)
-summary(plots_PCA)
+#summary(plots_PCA)
 ```
 
 
@@ -318,8 +318,8 @@ plots_PCA_imputed<-imputePCA(plots_PCA[,c(4,7,15:28)], ncp=number_dim$ncp)
 plots_PCA_imputed<-plots_PCA_imputed$completeObs
 rownames(plots_PCA_imputed) <- plots_PCA$Transect
 
-head(plots_PCA[is.na(plots_PCA$pH_KCl),c(4,7,15:28)])
-head(plots_PCA_imputed[is.na(plots_PCA$pH_KCl),])
+head(plots_PCA[is.na(plots_PCA$pH_KCl),c(4,7,15,16)])
+head(plots_PCA_imputed[is.na(plots_PCA$pH_KCl),c(1:4)])
 ```
 
 #### Run PCA on imputed dataset  
@@ -376,41 +376,57 @@ specsbysites_ab <- as.data.frame.matrix(specsbysites_ab)
 
 #### Species numbers per plot
 ```{r, echo=TRUE}
-colSums(specsbysites)
+colSums(specsbysites)[1:10]
 ```
 
 #### Individuals per plot
 ```{r, echo=TRUE}
-colSums(specsbysites_ab)
+colSums(specsbysites_ab)[1:10]
 ```
 
 #### Plots occupied per species
 ```{r, echo=TRUE}
-rowSums(specsbysites)
+rowSums(specsbysites)[1:10]
 ```
 
 #### Individuals per species
 ```{r, echo=TRUE}
-rowSums(specsbysites_ab)
+rowSums(specsbysites_ab)[1:10]
 
 par(mfrow=c(1,2))
-hist(colSums(specsbysites), xlab = "Species number")
-hist(colSums(specsbysites_ab), xlab = "Number of individuals")
+hist(colSums(specsbysites), xlab = "Species number", main="")
+hist(colSums(specsbysites_ab), xlab = "Number of individuals", main="")
 ```
 
 
 ### b) Diversity: Hill numbers  
 
-iNext provides three measures of Hill numbers of order q: species richness (q = 0), Shannon diversity (q = 1, the exponential of Shannon entropy) and Simpson diversity (q = 2, the inverse of Simpson concentration).  
+iNext provides three measures of Hill numbers of order q:  
+1) species richness (q = 0)  
+2) Shannon diversity (q = 1, the exponential of Shannon entropy)  
+3) Simpson diversity (q = 2, the inverse of Simpson concentration)  
 For each diversity measure, iNEXT uses the observed sample of abundance or incidence data to compute diversity estimates for two types of rarefaction and extrapolation.  
-https://cran.r-project.org/web/packages/iNEXT/vignettes/Introduction.html
+
+Learn more here:  
+https://cran.r-project.org/web/packages/iNEXT/vignettes/Introduction.html  
+
+Read about effective numbers of species and how to get them based on diversity indices like Shannon and Simpson:  
+http://www.loujost.com/Statistics%20and%20Physics/Diversity%20and%20Similarity/EffectiveNumberOfSpecies.htm  
 
 
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE}
 hill_numbers <- iNEXT(specsbysites_ab)
+```
 
-head(hill_numbers$DataInfo)
-head(hill_numbers$AsyEst)
+
+```{r, echo=TRUE}
+# head(hill_numbers$DataInfo) # basic data information
+# head(hill_numbers$$iNextEst) # Diversity estimates with rarefied and extrapolated samples.
+head(hill_numbers$AsyEst) # asymptotic diversity estimates Chao et al. (2013)
+```
+
+
+```{r, echo=TRUE}
 
 # Plotting accumulation curves would make sense for groups of plots for example from a certain region or treatment. Here we only use the hill numbers and diversity estimates per plot
 

@@ -100,6 +100,7 @@ library(ape)
 library(PhyloMeasures)
 library(tidyr)
 library(Hmisc)
+library(car)
 ```
 
 ```{r, eval=FALSE}
@@ -120,6 +121,7 @@ library(ape)
 library(PhyloMeasures)
 library(tidyr)
 library(Hmisc)
+library(car)
 ```
 
 
@@ -219,7 +221,7 @@ soils_plots <- soil %>%
 
 soils_plots_1 <- summarize_at(soil_grouped, .vars=c(2:28), .funs = mean, na.rm=TRUE)
 soils_plots_2 <- summarize_at(soil_grouped, .vars=c(29:31), .funs = function(x) paste(unique(x[!is.na(x)]), collapse=","))
-soils_plots <- join(soils_plots_1,soils_plots_2)
+soils_plots <- join(soils_plots_1,soils_plots_2, by="Transect")
 
 ```
 #### Aggreating pH  
@@ -234,7 +236,7 @@ soils_pH$pH_KCl <- -log10(soils_pH$mean_H) # transform to pH
 ```
 
 * Within function
-```{r, echo=TRUE}
+```{r, echo=TRUE, fig.width=5}
 soil_grouped <- group_by(soil, Transect) ### group by plot
 soils_pH_2 <- dplyr::summarize(soil_grouped, mean_pH_KCl = -log10(mean(10^-pH_KCl, na.rm = TRUE))) ### apply function to values by grouping
 
@@ -372,6 +374,7 @@ specsbysites <- as.data.frame.matrix(specsbysites)
 
 specsbysites_ab <- table(specsbysites_long[,c("Species_full","Transect")])
 specsbysites_ab <- as.data.frame.matrix(specsbysites_ab)
+specsbysites_ab[1:5,1:5]
 ```
 
 #### Species numbers per plot
@@ -458,53 +461,85 @@ head(diversity_2)
 ```{r, echo=TRUE}
 names(diversity)[1] <- "Transect"
 plots_PCA <- join(diversity, plots_PCA, type="right", by="Transect")
+pairs.panels(diversity[,c(2:7)])
 ```
-
-
-```{r, echo=TRUE}
-
 
 ### c) Diversity - environment relationship
-plot(abs(plots_PCA$Latitude), plots_PCA$Observed_Species_richness)
-plot(plots_PCA$Mean_annual_PPT, plots_PCA$Observed_Species_richness)
+```{r, echo=TRUE}
+par(mfrow = c(2,3))
+plot(abs(plots_PCA$Latitude), plots_PCA$Observed_Species_richness, xlab = "abs Latitude", ylab = "Species richness", pch=16, col=rgb(0,0,0,0.25), cex=0.5)
+regLine(lm(plots_PCA$Observed_Species_richness~abs(plots_PCA$Latitude)), col="darkred")
+plot(plots_PCA$Mean_annual_PPT, plots_PCA$Observed_Species_richness, xlab = "Precipitation", ylab = "Species richness", pch=16, col=rgb(0,0,0,0.25), cex=0.5)
+regLine(lm(plots_PCA$Observed_Species_richness~plots_PCA$Mean_annual_PPT), col="darkred")
+plot(plots_PCA$Elevation, plots_PCA$Observed_Species_richness, xlab = "Elevation", ylab = "Species richness", pch=16, col=rgb(0,0,0,0.25), cex=0.5)
+regLine(lm(plots_PCA$Observed_Species_richness~plots_PCA$Elevation), col="darkred")
 
-
-plot(plots_PCA$Latitude, plots_PCA$Observed_Species_richness)
-plot(plots_PCA$Latitude, plots_PCA$Observed_Species_richness)
-
-plot(plots_PCA$Dim.1, plots_PCA$Observed_Species_richness)
-plot(plots_PCA$Dim.1, plots_PCA$Observed_Shannon_diversity)
-plot(plots_PCA$Dim.1, plots_PCA$Observed_Simpson_diversity)
-
-plot(plots_PCA$Dim.2, plots_PCA$Observed_Species_richness)
-plot(plots_PCA$Dim.3, plots_PCA$Observed_Species_richness)
-plot(plots_PCA$Dim.4, plots_PCA$Observed_Species_richness)
-
-hist(plots_PCA$Observed_Species_richness)
-
+plot(plots_PCA$Dim.1, plots_PCA$Observed_Species_richness, xlab = "PCA axis 1", ylab = "Species richness", pch=16, col=rgb(0,0,0,0.25), cex=0.5)
+regLine(lm(plots_PCA$Observed_Species_richness~plots_PCA$Dim.1), col="darkred")
+plot(plots_PCA$Dim.2, plots_PCA$Observed_Species_richness, xlab = "PCA axis 2", ylab = "Species richness", pch=16, col=rgb(0,0,0,0.25), cex=0.5)
+regLine(lm(plots_PCA$Observed_Species_richness~plots_PCA$Dim.2), col="darkred")
+plot(plots_PCA$Dim.3, plots_PCA$Observed_Species_richness, xlab = "PCA axis 3", ylab = "Species richness", pch=16, col=rgb(0,0,0,0.25), cex=0.5)
+regLine(lm(plots_PCA$Observed_Species_richness~plots_PCA$Dim.3), col="darkred")
 ```
-We are not going into the details of regression models and model selection here  
+
+
+#### Linear Multi-predictor model
+```{r, echo=TRUE}
+richness_model <- lm(Observed_Species_richness ~ Habitat_type + Dim.1 + Dim.2 + Dim.3, data = plots_PCA)
+summary(richness_model)
+crPlots(richness_model, main = "", ylab="Species Richness", smooth=FALSE, grid=FALSE)
+```
+We are not going into the details of regression models and model selection here.  
 For your experimental setup you will most likely use mixed effects models. New package for mixed model diagnostics: https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html  
 
 ### c) Non-metric Multidimensional Scaling (NMDS)
 
 #### Calculate species turnover
 
-* Subset 
+* Subset our species by sites matrix for plots included in plots_PCA
 ```{r, echo=TRUE}
 specsbysites_ab_PCA <- specsbysites_ab[,which(names(specsbysites_ab) %in% plots_PCA$Transect)]
 specsbysites_ab_PCA <- specsbysites_ab_PCA[which(rowSums(specsbysites_ab_PCA)>0),]
+```
+  
+* Order plots the same way like species by sites
+```{r, echo=TRUE}
+all(row.names(plots_PCA_imputed)==names(specsbysites_ab_PCA))
+plots_PCA_imputed <- plots_PCA_imputed[order(row.names(plots_PCA_imputed)),]
+plots_PCA <- plots_PCA[order(plots_PCA$Transect),]
+all(plots_PCA$Transect==names(specsbysites_ab_PCA))
+```
+  
+* Calculate Bray Curtis dissimilarity, geographic and environmental distances
+```{r, echo=TRUE}
+betadiv <- vegdist(t(specsbysites_ab_PCA), method="bray")  # 1- abundance based Sörensen Index
+geodist <- vegdist(plots_PCA[,c("Latitude", "Longitude")], method="euclidean")
+envdist <- vegdist(scale(plots_PCA_imputed), method="euclidean")
+```
+  
+* Plot them
+```{r, echo=TRUE}
+par(mfrow=c(1,2))
+plot(geodist, betadiv, xlab="Geographic distance", ylab = "Palm turnover", pch=16, col=rgb(0,0,0,0.25), cex=0.2)
+plot(envdist, betadiv, xlab="Environmental distance", ylab = "Palm turnover", pch=16, col=rgb(0,0,0,0.25), cex=0.2)
+```
+Have a look at Generalized dissimilarity modelling:  
+Ferrier et al. (2007). _[Using generalized dissimilarity modelling to analyse and predict patterns of beta diversity in regional biodiversity assessment.](https://onlinelibrary.wiley.com/doi/10.1111/j.1472-4642.2007.00341.x)_ *Diversity and Distributions*, 17, 252-264.  
 
-# make subset for one region
 
-betadiv <- vegdist(specsbysites_ab_PCA, method="bray")  # 1- abundance based Sörensen Index
-betadiv_step <- stepacross(betadiv, "extended")
-# Function stepacross tries to replace dissimilarities with shortest paths stepping across intermediate sites while regarding dissimilarities above a threshold as missing data (NA). With path = "shortest" this is the flexible shortest path (Williamson 1978, Bradfield & Kenkel 1987), and with path = "extended" an approximation known as extended dissimilarities (De'ath 1999). The use of stepacross should improve the ordination with high beta diversity, when there are many sites with no species in common.
-nmds <- metaMDS(betadiv_step, k=3)
-stressplot(nmds, betadiv)
+#### Run NMDS  
+NMDS tries to reduce the difference between distances in the original matrix (here turnover) and distances in the ordination. The difference is quantified as stress. Lower stress value = better ordination. Clarke (1993): <0.05 = excellent, <0.10 = good, <0.20 = usable, >0.20 = not acceptable.
+```{r, echo=TRUE}
+nmds <- metaMDS(comm=t(specsbysites_ab_PCA), k=3, trace=FALSE)
+nmds
+```
+
+
+```{r, echo=TRUE}
 plot(nmds)
-
-
+ef <- envfit(nmds, plots_PCA_imputed, permu = 999)
+plot(nmds)
+plot(ef, p.max = 0.05)
 ```
 
 

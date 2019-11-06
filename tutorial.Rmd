@@ -558,8 +558,7 @@ Check _[vegantutor](http://cc.oulu.fi/~jarioksa/opetus/metodi/vegantutor.pdf)_ f
 
 ## 5. Species traits
 
-### a) Loading the trait data
-
+### a) Trait data
 
 #### Load traits  
 ```{r, echo=TRUE}
@@ -593,42 +592,75 @@ species$Species_full[which(!species$Species_full %in% traits$SpecName & species$
 ```{r, echo=TRUE}
 specsbysites_long$Species[which(specsbysites_long$Genus == "Aiphanes" & specsbysites_long$Species == "truncata")] <- "horrida"
 specsbysites_long$Species[which(specsbysites_long$Genus == "Geonoma" & specsbysites_long$Species == "longepedunculata")] <- "longipedunculata"
+```
 
-# Get new unique species names
+* Get new unique species names and compare again 
+```{r, echo=TRUE}
 species <- unique(specsbysites_long[,c("Genus", "Species")])
 species$Species_full <- paste(species$Genus, species$Species, sep=" ")
 length(which(species$Species != "sp"))
 
 species$Species_full[which(!species$Species_full %in% traits$SpecName & species$Species != "sp")]
-# no missing species left
+```
+No missing species left!  
 
-traits <- traits[which(traits$SpecName %in% species$Species_full),]
-nrow(traits)
-
-
-
-# Species by sites
+* Prepare new species by sites matrices
+```{r, echo=TRUE}
 specsbysites_long$Species_full <- paste(specsbysites_long$Genus, specsbysites_long$Species, sep=" ")
 
-specsbysites <- table(unique(specsbysites_long[,c("Transect", "Species_full")]))
-specsbysites <- as.data.frame.matrix(specsbysites)
-
-specsbysites_ab <- table(specsbysites_long[,c("Transect", "Species_full")])
+specsbysites_ab <- table(specsbysites_long[which(specsbysites_long$Species != "sp"),c("Transect", "Species_full")])
 specsbysites_ab <- as.data.frame.matrix(specsbysites_ab)
+```
+
+
+* Subset traits
+```{r, echo=TRUE}
+traits <- traits[which(traits$SpecName %in% species$Species_full),]
+summary(traits)
+```
+
+
+### b) Functional diversity
+
+Distance-based approaches use functional pairwise distance matrices calculated with principal components or coordinates analysis on multiple traits. The _[FD package](http://www.imsbio.co.jp/RGM/R_rdfile?f=FD/man/FD-package.Rd&d=R_CC)_ calculates three facets of functional diversity: functional richness, evenness, and dispersion. These facets are qualitatively similar to taxonomic diversity indices, i.e. species richness, evenness, and diversity. See _[Chao et al. (2019)](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/ecm.1343)_ for latest developments.  
+
+
+#### Make subset for a couple of interesting traits
+```{r, echo=TRUE}
+rownames(traits) <- traits$SpecName
+traits_FD <- traits[,c("MaxStemHeight_m", "MaxStemDia_cm", "MaxLeafNumber", "Max_Blade_Length_m", "Max_Rachis_Length_m", "AverageFruitLength_cm", "AverageFruitWidth_cm")]
+```
+
+
+
+#### Look at frequency distributions
+```{r, echo=TRUE}
+par(mfrow=c(3,3))
+
+for(i in 1:ncol(traits_FD)){
+  hist(traits_FD[,i], main="", xlab=names(traits_FD)[i])
+}
+
+traits_FD <- data.frame(apply(traits_FD, 2, function(x) log10(x+1)))
+
+par(mfrow=c(3,3))
+for(i in 1:ncol(traits_FD)){
+  hist(traits_FD[,i], main="", xlab=names(traits_FD)[i])
+}
+```
 
 
 
 
+```{r, echo=TRUE}
+palms_FD<-dbFD(traits_FD, specsbysites_ab, corr="cailliez", stand.x=TRUE, calc.FRic = TRUE,  
+                  stand.FRic = FALSE,calc.FGR=FALSE,calc.CWM=TRUE, calc.FDiv=FALSE)
 
+str(palms_FD)
+palms_CWMs <- palms_FD$CWM
 
+palms_FD1 <- data.frame(Transect=names(palms_FD$nbsp), palms_FD$nbsp,palms_FD$FRic, palms_FD$FEve,palms_FD$FDis)
 
-
-#http://www.imsbio.co.jp/RGM/R_rdfile?f=FD/man/FD-package.Rd&d=R_CC
-#functional diversity
-
-
-#calcluate functional diversity(
-  
 #calculate community weighted meandist(
   
 #do the same manually! with some apply function(

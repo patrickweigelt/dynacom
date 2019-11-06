@@ -462,7 +462,7 @@ head(diversity_2)
 ```
 
 * Join plots and diversity
-```{r, echo=TRUE,fig.align='center'}
+```{r, echo=TRUE,fig.align='center', fig.height=8, fig.width=8}
 names(diversity)[1] <- "Transect"
 plots_PCA <- join(diversity, plots_PCA, type="right", by="Transect")
 pairs.panels(diversity[,c(2:7)])
@@ -706,7 +706,7 @@ str(palm_tree)
 ```{r, echo=TRUE, fig.height=7,fig.align='center'}
 names(specsbysites_ab) <- gsub(" ", "_", names(specsbysites_ab))
 palm_tree_pruned <- prune.sample(specsbysites_ab, palm_tree)
-plot(palm_tree_pruned, type="fan", show.tip.label = TRUE, cex=0.3)
+plot(palm_tree_pruned, type="fan", show.tip.label = TRUE, cex=0.5)
 ```
 
 
@@ -721,7 +721,7 @@ head(palms_PD)
 ```
 
 #### Join PD to plots and compare to taxonomic and functional richness
-```{r, echo=TRUE,fig.align='center'}
+```{r, echo=TRUE,fig.align='center', fig.height=4}
 plots <- join(plots, palms_PD, by="Transect", type="left")
 
 par(mfrow=c(1,3))

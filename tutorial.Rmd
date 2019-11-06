@@ -101,6 +101,7 @@ library(PhyloMeasures)
 library(tidyr)
 library(Hmisc)
 library(car)
+library(RColorBrewer)
 ```
 
 ```{r, eval=FALSE}
@@ -122,6 +123,7 @@ library(PhyloMeasures)
 library(tidyr)
 library(Hmisc)
 library(car)
+library(RColorBrewer)
 ```
 
 
@@ -349,7 +351,7 @@ plots_PCA <- cbind(plots_PCA, pca_imputed$ind$coord)
 ```
 
 
-## Species diversity and composition
+## 4. Species diversity and composition
 
 ### a) Species composition data
 
@@ -530,8 +532,16 @@ Ferrier et al. (2007). _[Using generalized dissimilarity modelling to analyse an
 #### Run NMDS  
 NMDS tries to reduce the difference between distances in the original matrix (here turnover) and distances in the ordination. The difference is quantified as stress. Lower stress value = better ordination. Clarke (1993): <0.05 = excellent, <0.10 = good, <0.20 = usable, >0.20 = not acceptable.
 ```{r, echo=TRUE}
+set.seed(1000)
 nmds <- metaMDS(comm=t(specsbysites_ab_PCA), k=3, trace=FALSE)
 nmds
+```
+```{r, echo=TRUE}
+plot(nmds, type="none")
+colours <- data.frame(Habitat_type = unique(plots_PCA$Habitat_type), colour=brewer.pal(7,"Dark2"), stringsAsFactors = FALSE)
+plots_PCA <- join(plots_PCA, colours, type="left", by="Habitat_type")
+points(nmds, display="sites", col=plots_PCA$colour)
+legend(-3.8,2,colours$Habitat_type, colours$colour, bty="n")
 ```
 
 
@@ -541,13 +551,11 @@ ef <- envfit(nmds, plots_PCA_imputed, permu = 999)
 plot(nmds)
 plot(ef, p.max = 0.05)
 ```
+Check _[vegantutor](http://cc.oulu.fi/~jarioksa/opetus/metodi/vegantutor.pdf)_ for more options
 
 
-
-
+## 4. Species traits
 ```{r, echo=TRUE}
-
-
 
 # extract unique species names and create a combined species name (Genus epithet)
 species <- unique(specsbysites_long[,c("Genus", "Species")])

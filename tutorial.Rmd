@@ -701,7 +701,7 @@ plots <- join(plots, palms_CWMs, by="Transect", type="left")
 
 plot(plots$Mean_annual_PPT, plots$AverageFruitWidth_cm, xlab="Precipitation", ylab="Mean Fruit Width") 
 ```
-Community-weighted means in have been shown to cause high rates of Type I errors in regression because of non-independence of trait values across sites (Miller et al. 2018 Methods in Ecology and Evolution). Better use weighted correlations with permutation tests 4th corner analysis or measure trait values for each species in each plot.  
+Community-weighted means have been shown to cause high rates of Type I errors in regression because of non-independence of trait values across sites (Miller et al. 2018 Methods in Ecology and Evolution). Better use weighted correlations with permutation tests 4th corner analysis or measure trait values for each species in each plot.  
 
 
 

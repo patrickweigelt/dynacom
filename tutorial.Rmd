@@ -14,6 +14,8 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+* After having finished "2. Preparation" you can start the tutorial either 3. or 5.*
+
 
 ## 1. Overview  
 
@@ -65,7 +67,6 @@ Great reading on programming, data analysis and statistics in R can, for example
 * Within your project's folder, create three sub-folders:  
     + data  
     + code  
-    + figures  
 * Create a new empty R script: File | New File | R script  
 * Save file in ~/code 
 * Start coding!  
@@ -103,6 +104,7 @@ library(Hmisc)
 library(car)
 library(RColorBrewer)
 library(picante)
+library(gridExtra)
 ```
 
 ```{r, eval=FALSE}
@@ -126,6 +128,7 @@ library(Hmisc)
 library(car)
 library(RColorBrewer)
 library(picante)
+library(gridExtra)
 ```
 
 
@@ -332,9 +335,7 @@ head(plots_PCA_imputed[is.na(plots_PCA$pH_KCl),c(1:4)])
 ```{r, echo=TRUE,fig.align='center'}
 pca_imputed<-PCA(plots_PCA_imputed, scale.unit=TRUE, graph=FALSE) # 60% of variation on first two axes
 plot(pca_imputed,choix="var")
-# biplot function?
-# make nicer plots
-# What axes do the variables relate to?
+# biplot(pca_imputed$ind$coord[,c(1:2)], pca_imputed$var$coord[,c(1:2)])
 ```
 
 
@@ -488,13 +489,20 @@ regLine(lm(plots_PCA$Observed_Species_richness~plots_PCA$Dim.3), col="darkred")
 
 
 #### Linear Multi-predictor model
-```{r, echo=TRUE,fig.align='center'}
+```{r, echo=TRUE,fig.align='center', fig.width=8}
 richness_model <- lm(Observed_Species_richness ~ Habitat_type + Dim.1 + Dim.2 + Dim.3, data = plots_PCA)
 summary(richness_model)
-crPlots(richness_model, main = "", ylab="Species Richness", smooth=FALSE, grid=FALSE)
+#crPlots(richness_model, main = "", ylab="Species Richness", smooth=FALSE, grid=FALSE)
+
+p1 <- effect_plot(richness_model, pred = "Habitat_type", interval = TRUE, x.label="Species Richness", y.label="PCA axis 1", point.size = 2, partial.residuals = TRUE, jitter = .2)
+p2 <- effect_plot(richness_model, pred = "Dim.1", interval = TRUE, partial.residuals = TRUE,      x.label="Species Richness", y.label="PCA axis 1", point.size = 2)
+p3 <- effect_plot(richness_model, pred = "Dim.2", interval = TRUE, partial.residuals = TRUE,      x.label="Species Richness", y.label="PCA axis 2", point.size = 2)
+p4 <- effect_plot(richness_model, pred = "Dim.3", interval = TRUE, partial.residuals = TRUE,      x.label="Species Richness", y.label="PCA axis 3", point.size = 2)
+grid.arrange(p1, p2, p3, p4, nrow = 2)
 ```
 We are not going into the details of regression models and model selection here.  
 For your experimental setup you will most likely use mixed effects models. New package for mixed model diagnostics: https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html  
+For plotting: https://cran.r-project.org/web/packages/jtools/vignettes/effect_plot.html  
 
 ### d) Non-metric multidimensional scaling (NMDS)
 
@@ -703,7 +711,7 @@ str(palm_tree)
 
 
 #### Join tree to palm communities
-```{r, echo=TRUE, fig.height=7,fig.align='center'}
+```{r, echo=TRUE, fig.height=8,fig.align='center'}
 names(specsbysites_ab) <- gsub(" ", "_", names(specsbysites_ab))
 palm_tree_pruned <- prune.sample(specsbysites_ab, palm_tree)
 plot(palm_tree_pruned, type="fan", show.tip.label = TRUE, cex=0.5)
@@ -713,7 +721,7 @@ plot(palm_tree_pruned, type="fan", show.tip.label = TRUE, cex=0.5)
 ### b) Phylogenetic diversity
 
 #### Calculate PD
-```{r, echo=TRUE, warning=FALSE}
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
 palms_PD <- pd.query(palm_tree_pruned, specsbysites_ab, standardize = FALSE)
 palms_PDses <- pd.query(palm_tree_pruned, specsbysites_ab, standardize = TRUE,null.model="uniform")
 palms_PD <- data.frame(Transect=row.names(specsbysites_ab), palms_PD, palms_PDses)
@@ -725,7 +733,11 @@ head(palms_PD)
 plots <- join(plots, palms_PD, by="Transect", type="left")
 
 par(mfrow=c(1,3))
-plot(plots$nbsp, plots$palms_PD, xlab="Species richness", ylab="Faith's PD") 
+plot(plots$nbsp, plots$palms_PD, xlab="Species richness", ylab="Faith's PD")
+PD_model <- lm(palms_PD ~ nbsp + I(nbsp^2), data=plots)
+prediction <- predict(PD_model, newdata = data.frame(nbsp=seq(min(plots$nbsp), max(plots$nbsp), length.out=1000)))
+points(seq(min(plots$nbsp), max(plots$nbsp), length.out=1000), prediction, type="l", col="darkred", lwd=2)
 plot(plots$nbsp, plots$palms_PDses, xlab="Species richness", ylab="Faith's PDses") 
-plot(plots$palms_PD, plots$FRic, xlab="Faith's PD", ylab="Functional Richness") 
+plot(plots$palms_PD, plots$FRic, xlab="Faith's PD", ylab="Functional Richness")
+regLine(lm(plots$FRic~plots$palms_PD), col="darkred", lwd=2)
 ```

@@ -14,7 +14,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-* After having finished "2. Preparation" you can start the tutorial either 3. or 5.*
+* After having finished "2. Preparation" you can start the tutorial either from 3. or 5.*
 
 
 ## 1. Overview  
@@ -701,14 +701,16 @@ plots <- join(plots, palms_CWMs, by="Transect", type="left")
 
 plot(plots$Mean_annual_PPT, plots$AverageFruitWidth_cm, xlab="Precipitation", ylab="Mean Fruit Width") 
 ```
+### d) Excercise: Calculate Community weighted means
+
+Calculate community weighted means yourself (not via a function from the FD package) using for example loops or functions from the apply family  
 
 
+## 6. Phylogeny  
 
-## 6. Phylogeny 
+### a) Phylogenetic tree  
 
-### a) Phylogenetic tree
-
-#### Load tree and plot
+#### Load tree and plot  
 ```{r, echo=TRUE}
 palm_tree <- read.nexus("data/TREE.nex")
 str(palm_tree)

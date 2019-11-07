@@ -489,16 +489,18 @@ regLine(lm(plots_PCA$Observed_Species_richness~plots_PCA$Dim.3), col="darkred")
 
 
 #### Linear Multi-predictor model
-```{r, echo=TRUE,fig.align='center', fig.width=8}
+```{r, echo=TRUE,fig.align='center', fig.height=5}
 richness_model <- lm(Observed_Species_richness ~ Habitat_type + Dim.1 + Dim.2 + Dim.3, data = plots_PCA)
 summary(richness_model)
 #crPlots(richness_model, main = "", ylab="Species Richness", smooth=FALSE, grid=FALSE)
 
-p1 <- effect_plot(richness_model, pred = "Habitat_type", interval = TRUE, x.label="Species Richness", y.label="PCA axis 1", point.size = 2, partial.residuals = TRUE, jitter = .2)
-p2 <- effect_plot(richness_model, pred = "Dim.1", interval = TRUE, partial.residuals = TRUE,      x.label="Species Richness", y.label="PCA axis 1", point.size = 2)
-p3 <- effect_plot(richness_model, pred = "Dim.2", interval = TRUE, partial.residuals = TRUE,      x.label="Species Richness", y.label="PCA axis 2", point.size = 2)
-p4 <- effect_plot(richness_model, pred = "Dim.3", interval = TRUE, partial.residuals = TRUE,      x.label="Species Richness", y.label="PCA axis 3", point.size = 2)
-grid.arrange(p1, p2, p3, p4, nrow = 2)
+effect_plot(richness_model, pred = "Habitat_type", interval = TRUE, x.label="Species Richness", y.label="PCA axis 1", point.size = 2, partial.residuals = TRUE, jitter = .2)
+```
+```{r, echo=TRUE,fig.align='center', fig.width=8, fig.height=4}
+p1 <- effect_plot(richness_model, pred = "Dim.1", interval = TRUE, partial.residuals = TRUE,      y.label="Species Richness", x.label="PCA axis 1", point.size = 2)
+p2 <- effect_plot(richness_model, pred = "Dim.2", interval = TRUE, partial.residuals = TRUE,      y.label="Species Richness", x.label="PCA axis 2", point.size = 2)
+p3 <- effect_plot(richness_model, pred = "Dim.3", interval = TRUE, partial.residuals = TRUE,      y.label="Species Richness", x.label="PCA axis 3", point.size = 2)
+grid.arrange(p1, p2, p3, nrow = 1)
 ```
 We are not going into the details of regression models and model selection here.  
 For your experimental setup you will most likely use mixed effects models. New package for mixed model diagnostics: https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html  
@@ -563,7 +565,7 @@ plot(nmds)
 plot(ef, p.max = 0.05)
 ```
 
-Check _[vegantutor](http://cc.oulu.fi/~jarioksa/opetus/metodi/vegantutor.pdf)_ for more options
+Check _[vegantutor](http://cc.oulu.fi/~jarioksa/opetus/metodi/vegantutor.pdf)_ for more options.
 
 
 ## 5. Species traits
@@ -632,7 +634,7 @@ summary(traits)
 
 ### b) Functional diversity
 
-Distance-based approaches use functional pairwise distance matrices calculated with principal components or coordinates analysis on multiple traits. The _[FD package](http://www.imsbio.co.jp/RGM/R_rdfile?f=FD/man/FD-package.Rd&d=R_CC)_ calculates three facets of functional diversity: functional richness, evenness, and dispersion. These facets are qualitatively similar to taxonomic diversity indices, i.e. species richness, evenness, and diversity. See _[Chao et al. (2019)](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/ecm.1343)_ for latest developments.  
+Distance-based approaches use functional pairwise distance matrices calculated with principal components or coordinates analysis on multiple traits. The _[FD package](https://cran.r-project.org/web/packages/FD/FD.pdf)_ calculates three facets of functional diversity: functional richness, evenness, and dispersion. These facets are qualitatively similar to taxonomic diversity indices, i.e. species richness, evenness, and diversity. See _[Chao et al. (2019)](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/ecm.1343)_ for latest developments.  
 
 
 #### Make subset for a couple of interesting traits
@@ -672,6 +674,9 @@ str(palms_FD)
 ```{r, echo=TRUE, fig.height=4,fig.align='center'}
 
 palms_FD_all <- data.frame(Transect=names(palms_FD$nbsp), nbsp=palms_FD$nbsp, FRic=palms_FD$FRic, FEve=palms_FD$FEve, FDis=palms_FD$FDis)
+# FRic is measured as the convex hull volume (Villéger et al.  (2008))
+# Fdis average distance of species inPCoA space from centroid (Laliberte and Legendre (2010))
+# FEve is based on the minimum spanning tree which links all the species in the multidimensional functional space quantifying the regularity with which species abundances are distributed along the spanning tree (Villéger et al. (2008))
 
 par(mfrow=c(1,3))
 plot(palms_FD_all$nbsp, palms_FD_all$FRic)
@@ -721,8 +726,10 @@ plot(palm_tree_pruned, type="fan", show.tip.label = TRUE, cex=0.5)
 ### b) Phylogenetic diversity
 
 #### Calculate PD
+
+Faith's PD = Sum of branch lengths
 ```{r, echo=TRUE, warning=FALSE, message=FALSE}
-palms_PD <- pd.query(palm_tree_pruned, specsbysites_ab, standardize = FALSE)
+palms_PD <- pd.query(palm_tree_pruned, specsbysites_ab, standardize = FALSE) 
 palms_PDses <- pd.query(palm_tree_pruned, specsbysites_ab, standardize = TRUE,null.model="uniform")
 palms_PD <- data.frame(Transect=row.names(specsbysites_ab), palms_PD, palms_PDses)
 head(palms_PD)
